@@ -35,9 +35,10 @@ To create TinyMongo config file (config/tinymongo.yml), do the following:
     end
     
     def set_stuff(n,a,c)
-      name = n
-      age = a
-      children = c
+      # don't forget to put self
+      self.name = n
+      self.age = a
+      self.children = c
       save
     end
   end

@@ -61,14 +61,18 @@ module TinyMongo
         collection.remove({ '_id' => Helper.bson_object_id(id)})
       end
 
-      def delete_all
+      def drop
         collection.drop
+      end
+
+      def delete_all
+        drop
       end
       
       def destroy_all
-        delete_all
+        drop
       end
-
+      
       def count
         collection.count
       end
@@ -98,23 +102,13 @@ module TinyMongo
       @_tinymongo_hash.clone
     end
   
-    def save(v=true)
-      
-      if((v && (defined?(Rails) && self.valid?) || (!defined?(Rails))) || (!v))
-        begin
-          obj = create_or_update
-          return obj
-        rescue
-          return false
-        end
-      else
-        return false
-      end
+    def save
+      return create_or_update
     end
   
     def update_attribute(name, value)
       send(name.to_s + '=', value)
-      save(false)
+      save
     end
   
     def update_attributes(hash)
@@ -265,7 +259,9 @@ module TinyMongo
     protected  
     def create_or_update
       if(@_tinymongo_hash['_id'].nil?) # new 
-        @_tinymongo_hash['_id'] = collection.save(@_tinymongo_hash)
+        oid = collection.save(@_tinymongo_hash)
+        @_tinymongo_hash.delete(:_id)
+        @_tinymongo_hash['_id'] = oid
       else # update
         collection.update({ '_id' => @_tinymongo_hash['_id'] }, @_tinymongo_hash)
       end
