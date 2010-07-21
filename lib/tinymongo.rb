@@ -11,6 +11,7 @@ module TinyMongo
       @database = config['database'] || 'mongo'
       @username = config['username']
       @password = config['password']
+      @configured = true
     end
   
     def db
@@ -18,6 +19,8 @@ module TinyMongo
     end
 
     def connect
+      raise 'Please do TinyMongo.configure() before attempting to connect.' unless @configured
+      
       if defined?(PhusionPassenger) && @connection
         PhusionPassenger.on_event(:starting_worker_process) do |forked|
           @connection.connect_to_master if forked
@@ -34,7 +37,11 @@ module TinyMongo
         end
       end
       
-      true
+      @connected = true
+    end
+    
+    def connected?
+      @connected ? true : false
     end
   end
 end

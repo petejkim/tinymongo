@@ -6,3 +6,4 @@ Example:
 
     This will create:
         config/tinymongo.yml
+        config/initializers/tinymongo.rb

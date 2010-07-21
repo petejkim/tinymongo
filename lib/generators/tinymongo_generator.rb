@@ -3,6 +3,7 @@ class TinymongoGenerator < Rails::Generators::Base
   
   def generate_config
     template "tinymongo.yml.erb", "config/tinymongo.yml"
+    copy_file "tinymongo.rb", "config/initializers/tinymongo.rb"
   end
   
   private

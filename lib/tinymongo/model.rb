@@ -23,6 +23,7 @@ module TinyMongo
       end
       
       def db
+        raise 'Not connected to MongoDB. Please connect using TinyMongo.connect().' unless TinyMongo.connected?
         TinyMongo.db
       end
 
@@ -46,10 +47,11 @@ module TinyMongo
 
       def find_one(*args)
         if([BSON::ObjectID, String].include? args[0].class)
-          self.new(collection.find_one({'_id' => Helper.bson_object_id(args[0])}))
+          o = collection.find_one({'_id' => Helper.bson_object_id(args[0])})
         else
-          self.new(collection.find_one(*args))
+          o = collection.find_one(*args)
         end
+        o ? self.new(o) : nil
       end
 
       def create(hash)
@@ -103,7 +105,16 @@ module TinyMongo
     end
   
     def save
-      return create_or_update
+      if(@_tinymongo_hash['_id'].nil?) # new 
+        oid = collection.save(@_tinymongo_hash)
+        if(oid)
+          @_tinymongo_hash.delete(:_id)
+          @_tinymongo_hash['_id'] = oid
+        end
+      else # update
+        collection.update({ '_id' => @_tinymongo_hash['_id'] }, @_tinymongo_hash, :upsert => true)
+      end
+      return self
     end
   
     def update_attribute(name, value)
@@ -255,18 +266,5 @@ module TinyMongo
         collection.update({ '_id' => @_tinymongo_hash['_id'] }, { '$pullAll' => Helper.hashify_models_in_hash(hash) })
       end
     end
-  
-    protected  
-    def create_or_update
-      if(@_tinymongo_hash['_id'].nil?) # new 
-        oid = collection.save(@_tinymongo_hash)
-        @_tinymongo_hash.delete(:_id)
-        @_tinymongo_hash['_id'] = oid
-      else # update
-        collection.update({ '_id' => @_tinymongo_hash['_id'] }, @_tinymongo_hash)
-      end
-      return self
-    end
-
   end
 end

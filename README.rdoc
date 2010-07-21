@@ -6,15 +6,15 @@ Simple MongoDB wrapper
 
   gem install tinymongo
 
-== Rails Setup
+== Rails Setup (Rails 3)
 
-To create TinyMongo config file (config/tinymongo.yml), do the following:
+To create TinyMongo config file (config/tinymongo.yml) and initializer file (config/initializers/tinymongo.rb), do the following:
 
   rails generate tinymongo
   
 == Connecting To MongoDB directly (for non-Rails projects)
 
-  TinyMongo.configure({:host => 'localhost', :database => 'test'})
+  TinyMongo.configure({:host => 'localhost', :database => 'db_name'})
   TinyMongo.connect
   
 == Example
