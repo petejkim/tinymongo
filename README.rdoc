@@ -26,13 +26,12 @@ To create TinyMongo config file (config/tinymongo.yml), do the following:
     mongo_key :children
   
     def make_child
-      child = Person.new(:name => 'Baby', :age => 0)
-    
-      self.push({:children => child})
+      child = Person.create(:name => 'Baby', :age => 0)
+      push({:children => child})
     end
   
     def grow_up
-      self.inc({:age => 1})
+      inc({:age => 1})
     end
     
     def set_stuff(n,a,c)
