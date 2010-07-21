@@ -5,7 +5,7 @@
 
 Gem::Specification.new do |s|
   s.name = %q{tinymongo}
-  s.version = "0.1.1"
+  s.version = "0.1.2"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Peter Jihoon Kim"]
@@ -24,6 +24,7 @@ Gem::Specification.new do |s|
      "VERSION",
      "init.rb",
      "lib/generators/USAGE",
+     "lib/generators/templates/tinymongo.rb",
      "lib/generators/templates/tinymongo.yml.erb",
      "lib/generators/tinymongo_generator.rb",
      "lib/tinymongo.rb",

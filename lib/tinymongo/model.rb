@@ -47,11 +47,11 @@ module TinyMongo
 
       def find_one(*args)
         if([BSON::ObjectID, String].include? args[0].class)
-          o = collection.find_one({'_id' => Helper.bson_object_id(args[0])})
+          obj = collection.find_one({'_id' => Helper.bson_object_id(args[0])})
         else
-          o = collection.find_one(*args)
+          obj = collection.find_one(*args)
         end
-        o ? self.new(o) : nil
+        obj ? self.new(obj) : nil
       end
 
       def create(hash)
@@ -80,16 +80,16 @@ module TinyMongo
       end
     end
     
+    def initialize(hash={})
+      @_tinymongo_hash = Helper.stringify_keys_in_hash(hash)
+    end
+
     def _id
       @_tinymongo_hash['_id']
     end
     
     def _id=(val)
       @_tinymongo_hash['_id'] = Helper.bson_object_id(val)
-    end
-  
-    def initialize(hash={})
-      @_tinymongo_hash = Helper.stringify_keys_in_hash(hash)
     end
     
     def db
@@ -103,16 +103,24 @@ module TinyMongo
     def to_hash
       @_tinymongo_hash.clone
     end
-  
+    
+    def reload
+      if(self._id)
+        obj = collection.find_one({ '_id' => self._id })
+        @_tinymongo_hash = Helper.stringify_keys_in_hash(obj) if(obj)
+      end
+    end
+    
     def save
-      if(@_tinymongo_hash['_id'].nil?) # new 
+      if(self._id.nil?) # new 
         oid = collection.save(@_tinymongo_hash)
         if(oid)
           @_tinymongo_hash.delete(:_id)
-          @_tinymongo_hash['_id'] = oid
+          self._id = oid
         end
       else # update
-        collection.update({ '_id' => @_tinymongo_hash['_id'] }, @_tinymongo_hash, :upsert => true)
+        collection.update({ '_id' => self._id }, @_tinymongo_hash, :upsert => true)
+        reload
       end
       return self
     end
@@ -128,8 +136,8 @@ module TinyMongo
     end
   
     def delete
-      if(@_tinymongo_hash['_id'])
-        collection.remove({ '_id' => @_tinymongo_hash['_id'] })
+      if(self._id)
+        collection.remove({ '_id' => self._id })
       end
     end
   
@@ -152,16 +160,18 @@ module TinyMongo
         end
       end
     
-      if(@_tinymongo_hash['_id'])
-        collection.update({ '_id' => @_tinymongo_hash['_id'] }, { '$inc' => Helper.hashify_models_in_hash(hash) })
+      if(self._id)
+        collection.update({ '_id' => self._id }, { '$inc' => Helper.hashify_models_in_hash(hash) })
+        reload
       end
     end
   
     def set(hash)
       hash.each_pair { |key, value| send(key.to_s + '=', value) }
     
-      if(@_tinymongo_hash['_id'])
-        collection.update({ '_id' => @_tinymongo_hash['_id'] }, { '$set' => Helper.hashify_models_in_hash(hash) })
+      if(self._id)
+        collection.update({ '_id' => self._id }, { '$set' => Helper.hashify_models_in_hash(hash) })
+        reload
       end
     end
   
@@ -170,8 +180,9 @@ module TinyMongo
         @_tinymongo_hash.delete(key.to_s)
       end
     
-      if(@_tinymongo_hash['_id'])
-        collection.update({ '_id' => @_tinymongo_hash['_id'] }, { '$unset' => Helper.hashify_models_in_hash(hash) })
+      if(self._id)
+        collection.update({ '_id' => self._id }, { '$unset' => Helper.hashify_models_in_hash(hash) })
+        reload
       end
     end
   
@@ -186,8 +197,9 @@ module TinyMongo
         end
       end
     
-      if(@_tinymongo_hash['_id'])
-        collection.update({ '_id' => @_tinymongo_hash['_id'] }, { '$push' => Helper.hashify_models_in_hash(hash) })
+      if(self._id)
+        collection.update({ '_id' => self._id }, { '$push' => Helper.hashify_models_in_hash(hash) })
+        reload
       end
     end
   
@@ -202,8 +214,9 @@ module TinyMongo
         end
       end
 
-      if(@_tinymongo_hash['_id'])
-        collection.update({ '_id' => @_tinymongo_hash['_id'] }, { '$pushAll' => Helper.hashify_models_in_hash(hash) })
+      if(self._id)
+        collection.update({ '_id' => self._id }, { '$pushAll' => Helper.hashify_models_in_hash(hash) })
+        reload
       end
     end
   
@@ -216,8 +229,9 @@ module TinyMongo
         end
       end
     
-      if(@_tinymongo_hash['_id'])
-        collection.update({ '_id' => @_tinymongo_hash['_id'] }, { '$addToSet' => Helper.hashify_models_in_hash(hash) })
+      if(self._id)
+        collection.update({ '_id' => self._id }, { '$addToSet' => Helper.hashify_models_in_hash(hash) })
+        reload
       end
     end
   
@@ -234,8 +248,9 @@ module TinyMongo
         end
       end
     
-      if(@_tinymongo_hash['_id'])
-        collection.update({ '_id' => @_tinymongo_hash['_id'] }, { '$pop' => Helper.hashify_models_in_hash(hash) })
+      if(self._id)
+        collection.update({ '_id' => self._id }, { '$pop' => Helper.hashify_models_in_hash(hash) })
+        reload
       end
     end
   
@@ -247,8 +262,9 @@ module TinyMongo
         end
       end
     
-      if(@_tinymongo_hash['_id'])
-        collection.update({ '_id' => @_tinymongo_hash['_id'] }, { '$pull' => Helper.hashify_models_in_hash(hash) })
+      if(self._id)
+        collection.update({ '_id' => self._id }, { '$pull' => Helper.hashify_models_in_hash(hash) })
+        reload
       end
     end
   
@@ -262,8 +278,9 @@ module TinyMongo
         end
       end
     
-      if(@_tinymongo_hash['_id'])
-        collection.update({ '_id' => @_tinymongo_hash['_id'] }, { '$pullAll' => Helper.hashify_models_in_hash(hash) })
+      if(self._id)
+        collection.update({ '_id' => self._id }, { '$pullAll' => Helper.hashify_models_in_hash(hash) })
+        reload
       end
     end
   end
