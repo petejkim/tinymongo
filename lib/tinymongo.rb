@@ -19,7 +19,7 @@ module TinyMongo
     end
 
     def connect
-      raise 'Please do TinyMongo.configure() before attempting to connect.' unless @configured
+      raise NotConfiguredError unless @configured
       
       if defined?(PhusionPassenger) && @connection
         PhusionPassenger.on_event(:starting_worker_process) do |forked|
@@ -46,5 +46,6 @@ module TinyMongo
   end
 end
 
+require 'tinymongo/errors'
 require 'tinymongo/helper'
 require 'tinymongo/model'

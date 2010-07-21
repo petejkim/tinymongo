@@ -1,3 +1,5 @@
+require 'tinymongo/modifiers'
+
 module TinyMongo
   class Model
     class << self
@@ -23,7 +25,7 @@ module TinyMongo
       end
       
       def db
-        raise 'Not connected to MongoDB. Please connect using TinyMongo.connect().' unless TinyMongo.connected?
+        raise NotConnectedError unless TinyMongo.connected?
         TinyMongo.db
       end
 
@@ -149,139 +151,6 @@ module TinyMongo
       delete(id)
     end
   
-    def inc(hash)
-      hash.each_pair do |key, value|
-        key = key.to_s
-        
-        if(@_tinymongo_hash[key] && (@_tinymongo_hash[key].kind_of? Numeric))
-          send(key + '=', (send(key) + value))
-        else
-          send(key + '=', value)
-        end
-      end
-    
-      if(self._id)
-        collection.update({ '_id' => self._id }, { '$inc' => Helper.hashify_models_in_hash(hash) })
-        reload
-      end
-    end
-  
-    def set(hash)
-      hash.each_pair { |key, value| send(key.to_s + '=', value) }
-    
-      if(self._id)
-        collection.update({ '_id' => self._id }, { '$set' => Helper.hashify_models_in_hash(hash) })
-        reload
-      end
-    end
-  
-    def unset(hash)
-      hash.each_key do |key| 
-        @_tinymongo_hash.delete(key.to_s)
-      end
-    
-      if(self._id)
-        collection.update({ '_id' => self._id }, { '$unset' => Helper.hashify_models_in_hash(hash) })
-        reload
-      end
-    end
-  
-    def push(hash)
-      hash.each_pair do |key, value|
-        key = key.to_s
-        
-        if(@_tinymongo_hash[key] && (@_tinymongo_hash[key].instance_of? Array))
-          send(key) << value
-        else
-          send(key + '=', value)
-        end
-      end
-    
-      if(self._id)
-        collection.update({ '_id' => self._id }, { '$push' => Helper.hashify_models_in_hash(hash) })
-        reload
-      end
-    end
-  
-    def push_all(hash)
-      hash.each_pair do |key, value|
-        key = key.to_s
-        
-        if(@_tinymongo_hash[key] && (@_tinymongo_hash[key].instance_of? Array))
-          value.each { |v| send(key) << value }
-        else
-          send(key + '=', value)
-        end
-      end
-
-      if(self._id)
-        collection.update({ '_id' => self._id }, { '$pushAll' => Helper.hashify_models_in_hash(hash) })
-        reload
-      end
-    end
-  
-    def add_to_set(hash)
-      hash.each_pair do |key, value|
-        key = key.to_s
-        
-        if(!(@_tinymongo_hash[key].include? value) && (@_tinymongo_hash[key].instance_of? Array))
-          send(key) << value
-        end
-      end
-    
-      if(self._id)
-        collection.update({ '_id' => self._id }, { '$addToSet' => Helper.hashify_models_in_hash(hash) })
-        reload
-      end
-    end
-  
-    def pop(hash)
-      hash.each_pair do |key, value|
-        key = key.to_s
-
-        if(@_tinymongo_hash[key] && (@_tinymongo_hash[key].instance_of? Array))
-          if(value == 1)
-            send(key).pop
-          elsif(value == -1)
-            send(key).shift
-          end
-        end
-      end
-    
-      if(self._id)
-        collection.update({ '_id' => self._id }, { '$pop' => Helper.hashify_models_in_hash(hash) })
-        reload
-      end
-    end
-  
-    def pull(hash)
-      hash.each_pair do |key, value|
-        key = key.to_s
-        if(@_tinymongo_hash[key] && (@_tinymongo_hash[key].instance_of? Array))
-          send(key).delete_if { |v| v == value }
-        end
-      end
-    
-      if(self._id)
-        collection.update({ '_id' => self._id }, { '$pull' => Helper.hashify_models_in_hash(hash) })
-        reload
-      end
-    end
-  
-    def pull_all(hash)
-      hash.each_pair do |key, value|
-        key = key.to_s
-        if(@_tinymongo_hash[key] && (@_tinymongo_hash[key].instance_of? Array))
-          value.each do |v|
-            send(key).delete_if { |w| w == v }
-          end
-        end
-      end
-    
-      if(self._id)
-        collection.update({ '_id' => self._id }, { '$pullAll' => Helper.hashify_models_in_hash(hash) })
-        reload
-      end
-    end
+    include Modifiers
   end
 end
