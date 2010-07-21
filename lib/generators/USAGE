@@ -1,0 +1,8 @@
+Description:
+    Creates TinyMongo config file
+
+Example:
+    rails generate tinymongo
+
+    This will create:
+        config/tinymongo.yml

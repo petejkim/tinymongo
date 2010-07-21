@@ -1,0 +1,48 @@
+= TinyMongo
+
+Simple MongoDB wrapper
+
+== Install
+
+  gem install tinymongo
+
+== Rails Setup
+
+To create TinyMongo config file (config/tinymongo.yml), do the following:
+
+  rails generate tinymongo
+  
+== Connecting To MongoDB directly (for non-Rails projects)
+
+  TinyMongo.configure({:host => 'localhost', :database => 'test'})
+  TinyMongo.connect
+  
+== Example
+
+  class Person < TinyMongo::Model
+    mongo_collection :people  # optional if using Rails
+    mongo_key :name
+    mongo_key :age
+    mongo_key :children
+  
+    def make_child
+      child = Person.new(:name => 'Baby', :age => 0)
+    
+      self.push({:children => child})
+    end
+  
+    def grow_up
+      self.inc({:age => 1})
+    end
+    
+    def set_stuff(n,a,c)
+      name = n
+      age = a
+      children = c
+      save
+    end
+  end
+  
+== Copyright
+
+Copyright (c) 2010 Peter Jihoon Kim. See LICENSE for details.
