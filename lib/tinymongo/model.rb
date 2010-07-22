@@ -25,7 +25,6 @@ module TinyMongo
       end
       
       def db
-        raise NotConnectedError unless TinyMongo.connected?
         TinyMongo.db
       end
 
@@ -44,16 +43,23 @@ module TinyMongo
         args.each do |arg|
           new_args << Helper.hashify_models_in(arg)
         end
-        collection.find(*new_args)
+        cursor = collection.find(*new_args)
+        
+        if(cursor && cursor.count > 0)
+          hashes = cursor.to_a
+          objs = hashes.map { |hash| self.new(hash) }
+        end
+        
+        cursor ? objs : nil
       end
 
       def find_one(*args)
         if([BSON::ObjectID, String].include? args[0].class)
-          obj = collection.find_one({'_id' => Helper.bson_object_id(args[0])})
+          hash = collection.find_one({'_id' => Helper.bson_object_id(args[0])})
         else
-          obj = collection.find_one(*args)
+          hash = collection.find_one(*args)
         end
-        obj ? self.new(obj) : nil
+        hash ? self.new(hash) : nil
       end
 
       def create(hash)
@@ -112,7 +118,7 @@ module TinyMongo
         @_tinymongo_hash = Helper.stringify_keys_in_hash(obj) if(obj)
       end
     end
-    
+
     def save
       if(self._id.nil?) # new 
         oid = collection.save(@_tinymongo_hash)
@@ -150,7 +156,7 @@ module TinyMongo
     def destroy(id)
       delete(id)
     end
-  
+    
     include Modifiers
   end
 end

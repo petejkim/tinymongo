@@ -15,6 +15,7 @@ module TinyMongo
     end
   
     def db
+      raise NotConnectedError unless TinyMongo.connected?
       @db
     end
 

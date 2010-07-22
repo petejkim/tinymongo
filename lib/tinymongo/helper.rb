@@ -28,11 +28,7 @@ module TinyMongo
       end
       
       def hashify_models_in_array(array)
-        new_array = []
-        array.each do |value|
-          new_array << hashify_models_in(value)
-        end
-        new_array
+        new_array = array.map { |value| hashify_models_in(value) }
       end
       
       def hashify_models_in_hash(hash)
