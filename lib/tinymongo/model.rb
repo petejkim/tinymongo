@@ -39,30 +39,32 @@ module TinyMongo
       end
       
       def find(*args)
-        new_args = []
-        args.each do |arg|
-          new_args << Helper.hashify_models_in(arg)
-        end
+        return [] if((args.size > 0) && (args.compact.size == 0))
+        
+        new_args = args.map {|arg| Helper.hashify_models_in(arg) }
         cursor = collection.find(*new_args)
         
-        if(cursor && cursor.count > 0)
+        if(cursor)
           hashes = cursor.to_a
           objs = hashes.map { |hash| self.new(hash) }
         end
         
-        cursor ? objs : nil
+        cursor ? objs : []
       end
 
       def find_one(*args)
-        if([BSON::ObjectID, String].include? args[0].class)
+        if((args.size > 0) && (args.compact.size == 0))
+          return nil
+        elsif((args.size == 1) && ([BSON::ObjectID, String].include? args[0].class))
           hash = collection.find_one({'_id' => Helper.bson_object_id(args[0])})
         else
-          hash = collection.find_one(*args)
+          new_args = args.map {|arg| Helper.hashify_models_in(arg) }
+          hash = collection.find_one(*new_args)
         end
         hash ? self.new(hash) : nil
       end
 
-      def create(hash)
+      def create(hash={})
         obj = self.new(hash)
         obj.save
       end
@@ -100,6 +102,10 @@ module TinyMongo
       @_tinymongo_hash['_id'] = Helper.bson_object_id(val)
     end
     
+    def ==(another)
+      self.to_hash == another.to_hash
+    end
+    
     def db
       self.db
     end
@@ -109,7 +115,7 @@ module TinyMongo
     end
     
     def to_hash
-      @_tinymongo_hash.clone
+      @_tinymongo_hash.dup
     end
     
     def reload

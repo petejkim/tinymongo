@@ -103,32 +103,84 @@ class TinyMongoTest < Test::Unit::TestCase
     assert_equal 'hello', result['bar']
   end
   
+  def test_find_nothing
+    found = Dummy.find()
+    assert_equal [], found
+  end
+    
+  def test_find_all_one
+    obj = Dummy.create('foo' => 'hello') 
+    found = Dummy.find()
+    assert_equal [obj], found
+  end
+  
+  def test_find_all_many
+    obj = Dummy.create('foo' => 'hello') 
+    obj2 = Dummy.create('foo' => 'hello') 
+    found = Dummy.find()
+    assert_equal [obj, obj2], found
+  end
+  
+  def test_find_among_many
+    obj = Dummy.create('foo' => 'hello') 
+    obj2 = Dummy.create('foo' => 'hello') 
+    obj3 = Dummy.create('foo' => 'bye') 
+    found1 = Dummy.find({'foo' => 'hello'})
+    found2 = Dummy.find({'foo' => 'bye'})
+    assert_equal [obj, obj2], found1
+    assert_equal [obj3], found2
+  end
+  
+  def test_find_one
+    obj = Dummy.create('foo' => 'hello') 
+    found = Dummy.find_one()
+    assert_equal obj, found
+  end
+  
+  def test_find_one_nil
+    found = Dummy.find_one(nil)
+    assert_equal nil, found
+  end
+  
   def test_find_one_using_id
-    o_id = TinyMongo.db['dummies'].save({'foo' => 'hello'})
-    
-    found = Dummy.find_one(o_id)
-    
-    assert_equal 'hello', found.foo
-    assert_equal o_id, found._id
+    obj = Dummy.create('foo' => 'hello') 
+    found = Dummy.find_one(obj._id)
+    assert_equal obj, found
   end
   
   def test_find_one_using_id_string
-    o_id = TinyMongo.db['dummies'].save({'foo' => 'hello'})
-    
-    found = Dummy.find_one(o_id.to_s)
-    
-    assert_equal 'hello', found.foo
-    assert_equal o_id, found._id
+    obj = Dummy.create('foo' => 'hello') 
+    found = Dummy.find_one(obj._id.to_s)
+    assert_equal obj, found
+  end
+
+  def test_find_one_using_id_in_hash
+    obj = Dummy.create('foo' => 'hello') 
+    found = Dummy.find_one({'_id' => obj._id})
+    assert_equal obj, found
+  end
+  
+  def test_find_one_using_id_string_in_hash
+    obj = Dummy.create('foo' => 'hello') 
+    found = Dummy.find_one({'_id' => obj._id.to_s})
+    assert_equal obj, found
   end
 
   def test_find_one_using_hash
-    o_id = TinyMongo.db['dummies'].save({'foo' => 'hello', 'bar' => 'world'})
-    
+    obj = Dummy.create('foo' => 'hello') 
     found = Dummy.find_one({'foo' => 'hello'})
-    
-    assert_equal 'hello', found.foo
-    assert_equal 'world', found.bar
-    assert_equal o_id, found._id
+    assert_equal obj, found
+  end
+  
+  def test_to_hash
+    obj = Dummy.create('foo' => 'hello')
+    assert_equal({'_id' => obj._id, 'foo' => 'hello'}, obj.to_hash)
+  end
+  
+  def test_eq
+    obj = Dummy.create('foo' => 'hello')
+    obj2 = Dummy.find_one()
+    assert_equal obj, obj2
   end
   
   def test_count
