@@ -73,6 +73,10 @@ module TinyMongo
         collection.remove({ '_id' => Helper.bson_object_id(id)})
       end
 
+      def destroy(id)
+        delete(id)
+      end
+
       def drop
         collection.drop
       end
@@ -144,7 +148,7 @@ module TinyMongo
       save
     end
   
-    def update_attributes(hash)
+    def update_attributes(hash={})
       hash.each_pair { |key, value| send(key.to_s + '=', value) }
       save
     end
@@ -158,11 +162,7 @@ module TinyMongo
     def destroy
       delete
     end
-  
-    def destroy(id)
-      delete(id)
-    end
-    
+      
     include Modifiers
   end
 end

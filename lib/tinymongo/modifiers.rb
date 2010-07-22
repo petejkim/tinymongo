@@ -1,38 +1,38 @@
 module TinyMongo
   module Modifiers
-    def inc(hash)
+    def inc(hash={})
       do_modifier_operation_and_reload('$inc', hash)
     end
   
-    def set(hash)
+    def set(hash={})
       do_modifier_operation_and_reload('$set', hash)
     end
   
-    def unset(hash)
+    def unset(hash={})
       do_modifier_operation_and_reload('$unset', hash)
     end
   
-    def push(hash)
+    def push(hash={})
       do_modifier_operation_and_reload('$push', hash)
     end
   
-    def push_all(hash)
+    def push_all(hash={})
       do_modifier_operation_and_reload('$pushAll', hash)
     end
   
-    def add_to_set(hash)
+    def add_to_set(hash={})
       do_modifier_operation_and_reload('$addToSet', hash)
     end
   
-    def pop(hash)
+    def pop(hash={})
       do_modifier_operation_and_reload('$pop', hash)
     end
   
-    def pull(hash)
+    def pull(hash={})
       do_modifier_operation_and_reload('$pull', hash)
     end
   
-    def pull_all(hash)
+    def pull_all(hash={})
       do_modifier_operation_and_reload('$pullAll', hash)
     end
     
