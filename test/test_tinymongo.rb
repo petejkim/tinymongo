@@ -286,8 +286,18 @@ class TinyMongoTest < Test::Unit::TestCase
     assert_equal({'_id' => obj._id, 'foo' => 'hello'}, obj.to_hash)
   end
   
+  def test_id
+    obj = Dummy.create
+    assert_equal obj._id.to_s, obj.id
+  end
+  
+  def test_to_param
+    obj = Dummy.create
+    assert_equal obj._id.to_s, obj.to_param
+  end
+  
   def test_eq
-    obj = Dummy.create('foo' => 'hello')
+    obj = Dummy.create
     obj2 = Dummy.find_one()
     assert_equal obj, obj2
   end

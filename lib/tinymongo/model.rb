@@ -90,8 +90,17 @@ module TinyMongo
       @_tinymongo_hash['_id'] = Helper.bson_object_id(val)
     end
     
+    def id
+      @_tinymongo_hash['_id'].to_s
+    end
+    
+    def id=(val)
+      @_tinymongo_hash['_id'] = Helper.bson_object_id(val)
+    end
+    
     def ==(another)
-      self.to_hash == another.to_hash
+      (self.instance_variable_get(:@_tinymongo_hash) == another.instance_variable_get(:@_tinymongo_hash)) &&
+      (self.kind_of? TinyMongo::Model) && (another.kind_of? TinyMongo::Model)
     end
     
     def db
@@ -106,22 +115,26 @@ module TinyMongo
       @_tinymongo_hash.dup
     end
     
+    def to_param
+      @_tinymongo_hash['_id'].to_s
+    end
+    
     def reload
-      if(self._id)
-        obj = collection.find_one({ '_id' => self._id })
+      if(@_tinymongo_hash['_id'])
+        obj = collection.find_one({ '_id' => @_tinymongo_hash['_id'] })
         @_tinymongo_hash = Helper.stringify_keys_in_hash(obj) if(obj)
       end
     end
 
     def save
-      if(self._id.nil?) # new 
+      if(@_tinymongo_hash['_id'].nil?) # new 
         oid = collection.save(@_tinymongo_hash)
         if(oid)
           @_tinymongo_hash.delete(:_id)
-          self._id = oid
+          @_tinymongo_hash['_id'] = oid
         end
       else # update
-        collection.update({ '_id' => self._id }, @_tinymongo_hash, :upsert => true)
+        collection.update({ '_id' => @_tinymongo_hash['_id'] }, @_tinymongo_hash, :upsert => true)
         reload
       end
       return self
@@ -138,8 +151,8 @@ module TinyMongo
     end
   
     def delete
-      if(self._id)
-        collection.remove({ '_id' => self._id })
+      if(@_tinymongo_hash['_id'])
+        collection.remove({ '_id' => @_tinymongo_hash['_id'] })
       end
     end
   
@@ -185,8 +198,8 @@ module TinyMongo
   
     protected
     def do_modifier_operation_and_reload(operator, hash)
-      raise ModifierOperationError unless self._id
-      collection.update({ '_id' => self._id }, { operator => Helper.hashify_models_in_hash(hash) })
+      raise ModifierOperationError unless @_tinymongo_hash['_id']
+      collection.update({ '_id' => @_tinymongo_hash['_id'] }, { operator => Helper.hashify_models_in_hash(hash) })
       reload
     end
   end
