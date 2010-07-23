@@ -11,8 +11,8 @@ begin
     s.homepage          = "http://github.com/petejkim/tinymongo"
     s.authors           = ["Peter Jihoon Kim"]
     s.email             = "raingrove@gmail.com"
-    s.add_dependency 'mongo'
-    s.add_dependency 'bson'
+    s.add_dependency(%q<mongo>, [">= 1.0.5"])
+    s.add_dependency(%q<bson>, [">= 1.0.4"])
   end
 
   Jeweler::GemcutterTasks.new

@@ -2,6 +2,10 @@
 
 Simple MongoDB wrapper
 
+== Notice
+
+This gem is not yet ready for production use.
+
 == Install
 
   gem install tinymongo
@@ -20,18 +24,18 @@ To create TinyMongo config file (config/tinymongo.yml) and initializer file (con
 == Example
 
   class Person < TinyMongo::Model
-    mongo_collection :people  # optional if using Rails
+    mongo_collection :people          # optional if using Rails
     mongo_key :name
     mongo_key :age
     mongo_key :children
   
     def make_child
       child = Person.create(:name => 'Baby', :age => 0)
-      push({:children => child})
+      push({:children => child})      # push child into children array
     end
   
     def grow_up
-      inc({:age => 1})
+      inc({:age => 1})                # increments age by 1
     end
     
     def set_stuff(n,a,c)
@@ -42,6 +46,26 @@ To create TinyMongo config file (config/tinymongo.yml) and initializer file (con
       save
     end
   end
+  
+  Person.drop                         # empty drop collection
+  
+  p = Person.create(:name => 'John', :age => 20)  # create John
+  p.make_child                        # make Baby and set it as John's child
+  p.grow_up                           # increment age by 1 = 21
+  
+  Person.find.each do |person|
+    puts person.name                  # print Baby and John
+  end
+  
+  puts Person.find_one(:name => 'John').age  # print 21
+  
+  Person.create(:name => 'Jim')
+  Person.create(:name => 'Pam')
+
+  puts Person.find.to_a.map { |person| person.name } # print Baby; John; Jim; Pam
+  
+  # Sort by name (ascending), Skip Baby and Jim, limit result by 1, print => John
+  puts Person.find.sort({:name => 1}).skip(2).limit(1).next_document.name 
   
 == Copyright
 

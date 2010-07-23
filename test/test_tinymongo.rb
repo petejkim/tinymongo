@@ -104,20 +104,20 @@ class TinyMongoTest < Test::Unit::TestCase
   end
   
   def test_find_nothing
-    found = Dummy.find()
+    found = Dummy.find().to_a
     assert_equal [], found
   end
     
   def test_find_all_one
     obj = Dummy.create('foo' => 'hello') 
-    found = Dummy.find()
+    found = Dummy.find().to_a
     assert_equal [obj], found
   end
   
   def test_find_all_many
     obj = Dummy.create('foo' => 'hello') 
     obj2 = Dummy.create('foo' => 'hello') 
-    found = Dummy.find()
+    found = Dummy.find().to_a
     assert_equal [obj, obj2], found
   end
   
@@ -125,10 +125,119 @@ class TinyMongoTest < Test::Unit::TestCase
     obj = Dummy.create('foo' => 'hello') 
     obj2 = Dummy.create('foo' => 'hello') 
     obj3 = Dummy.create('foo' => 'bye') 
-    found1 = Dummy.find({'foo' => 'hello'})
-    found2 = Dummy.find({'foo' => 'bye'})
+    found1 = Dummy.find({'foo' => 'hello'}).to_a
+    found2 = Dummy.find({'foo' => 'bye'}).to_a
     assert_equal [obj, obj2], found1
     assert_equal [obj3], found2
+  end
+  
+  def test_cursor_close
+    Dummy.create
+    cursor = Dummy.find
+    assert_equal true, cursor.close
+  end
+
+  def test_cursor_closed?
+    Dummy.create
+    cursor = Dummy.find
+    cursor.close
+    assert_equal true, cursor.closed?
+  end
+
+
+  def test_cursor_count
+    Dummy.create
+    Dummy.create
+    Dummy.create
+    cursor = Dummy.find
+    assert_equal 3, cursor.count
+  end
+  
+  def test_cursor_limit
+    Dummy.create
+    Dummy.create
+    Dummy.create
+    cursor = Dummy.find.limit(1)
+    assert_equal 1, cursor.to_a.size
+  end
+  
+  def test_cursor_limit_count
+    Dummy.create
+    Dummy.create
+    Dummy.create
+    cursor = Dummy.find.limit(2)
+    assert_equal 2, cursor.limit
+  end
+
+  def test_cursor_each
+    Dummy.create('foo' => 1) 
+    Dummy.create('foo' => 2) 
+    Dummy.create('foo' => 3) 
+    
+    cursor = Dummy.find
+    num = 0
+    cursor.each do |x|
+      num += x.foo
+    end
+    
+    assert_equal 6, num
+  end
+
+  def test_cursor_has_next?
+    Dummy.create
+    cursor = Dummy.find
+    assert_equal true, cursor.has_next?
+  end
+
+  def test_cursor_next_document
+    obj = Dummy.create
+    cursor = Dummy.find
+    assert_equal obj, cursor.next_document
+  end
+  
+  def test_cursor_skip
+    Dummy.create('foo' => 1) 
+    Dummy.create('foo' => 2) 
+    obj = Dummy.create('foo' => 3) 
+    
+    cursor = Dummy.find.skip(2)
+    assert_equal obj, cursor.next_document
+  end
+  
+  def test_cursor_skip_count
+    Dummy.create('foo' => 1) 
+    Dummy.create('foo' => 2) 
+    obj = Dummy.create('foo' => 3) 
+    
+    cursor = Dummy.find.skip(2)
+    assert_equal 2, cursor.skip
+  end
+
+  def test_cursor_to_a
+    obj1 = Dummy.create
+    obj2 = Dummy.create
+    obj3 = Dummy.create
+
+    cursor = Dummy.find
+    assert_equal [obj1, obj2, obj3], cursor.to_a
+  end
+  
+  def test_cursor_sort
+    obj1 = Dummy.create('foo' => 3) 
+    obj2 = Dummy.create('foo' => 2) 
+    obj3 = Dummy.create('foo' => 1) 
+    
+    cursor = Dummy.find.sort(['foo', 'ascending'])
+    assert_equal [obj3, obj2, obj1], cursor.to_a
+  end
+
+  def test_cursor_sort_hash
+    obj1 = Dummy.create('foo' => 3) 
+    obj2 = Dummy.create('foo' => 2) 
+    obj3 = Dummy.create('foo' => 1) 
+    
+    cursor = Dummy.find.sort({'foo' => 1})
+    assert_equal [obj3, obj2, obj1], cursor.to_a
   end
   
   def test_find_one

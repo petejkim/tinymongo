@@ -1,5 +1,3 @@
-require 'tinymongo/modifiers'
-
 module TinyMongo
   class Model
     class << self
@@ -9,13 +7,8 @@ module TinyMongo
             key_name_s = key_name.to_s
             key_name_sym = key_name.to_sym
 
-            define_method(key_name_sym) do
-              instance_variable_get("@_tinymongo_hash")[key_name_s]
-            end
-
-            define_method("#{key_name_s}=".to_sym) do |val|
-              instance_variable_get("@_tinymongo_hash")[key_name_s] = val
-            end
+            define_method(key_name_sym) { instance_variable_get(:@_tinymongo_hash)[key_name_s] }
+            define_method("#{key_name_s}=") { |val| instance_variable_get(:@_tinymongo_hash)[key_name_s] = val }
           end
         end
       end
@@ -39,23 +32,14 @@ module TinyMongo
       end
       
       def find(*args)
-        return [] if((args.size > 0) && (args.compact.size == 0))
-        
         new_args = args.map {|arg| Helper.hashify_models_in(arg) }
-        cursor = collection.find(*new_args)
-        
-        if(cursor)
-          hashes = cursor.to_a
-          objs = hashes.map { |hash| self.new(hash) }
-        end
-        
-        cursor ? objs : []
+        Cursor.new(collection.find(*new_args), self)
       end
 
       def find_one(*args)
-        if((args.size > 0) && (args.compact.size == 0))
+        if((args.length > 0) && (args.compact.length == 0))
           return nil
-        elsif((args.size == 1) && ([BSON::ObjectID, String].include? args[0].class))
+        elsif((args.length == 1) && ([BSON::ObjectID, String].include? args[0].class))
           hash = collection.find_one({'_id' => Helper.bson_object_id(args[0])})
         else
           new_args = args.map {|arg| Helper.hashify_models_in(arg) }
@@ -95,7 +79,7 @@ module TinyMongo
     end
     
     def initialize(hash={})
-      @_tinymongo_hash = Helper.stringify_keys_in_hash(hash)
+      @_tinymongo_hash = Helper.stringify_keys_in_hash(hash) || {}
     end
 
     def _id
@@ -163,6 +147,47 @@ module TinyMongo
       delete
     end
       
-    include Modifiers
+    def inc(hash={})
+      do_modifier_operation_and_reload('$inc', hash)
+    end
+
+    def set(hash={})
+      do_modifier_operation_and_reload('$set', hash)
+    end
+
+    def unset(hash={})
+      do_modifier_operation_and_reload('$unset', hash)
+    end
+
+    def push(hash={})
+      do_modifier_operation_and_reload('$push', hash)
+    end
+
+    def push_all(hash={})
+      do_modifier_operation_and_reload('$pushAll', hash)
+    end
+
+    def add_to_set(hash={})
+      do_modifier_operation_and_reload('$addToSet', hash)
+    end
+
+    def pop(hash={})
+      do_modifier_operation_and_reload('$pop', hash)
+    end
+
+    def pull(hash={})
+      do_modifier_operation_and_reload('$pull', hash)
+    end
+
+    def pull_all(hash={})
+      do_modifier_operation_and_reload('$pullAll', hash)
+    end
+  
+    protected
+    def do_modifier_operation_and_reload(operator, hash)
+      raise ModifierOperationError unless self._id
+      collection.update({ '_id' => self._id }, { operator => Helper.hashify_models_in_hash(hash) })
+      reload
+    end
   end
 end

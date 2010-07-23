@@ -49,4 +49,5 @@ end
 
 require 'tinymongo/errors'
 require 'tinymongo/helper'
+require 'tinymongo/cursor'
 require 'tinymongo/model'
