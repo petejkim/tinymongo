@@ -26,11 +26,11 @@ To create TinyMongo config file (config/tinymongo.yml) and initializer file (con
   class Person < TinyMongo::Model
     mongo_collection :people          # optional if using Rails
     mongo_key :name
-    mongo_key :age
-    mongo_key :children
+    mongo_key :age, :default => 0
+    mongo_key :children, :default => []
   
     def make_child
-      child = Person.create(:name => 'Baby', :age => 0)
+      child = Person.create(:name => 'Baby')
       push({:children => child})      # push child into children array
     end
   

@@ -10,6 +10,15 @@ class Dummy < TinyMongo::Model
   mongo_key :bar
 end
 
+class DummyTwo < TinyMongo::Model
+  mongo_key :foo, :bar
+end
+
+class DummyDefault < TinyMongo::Model
+  mongo_key :foo, :default => 'hello'
+  mongo_key :bar, :default => 'world'
+end
+
 class TinyMongoTest < Test::Unit::TestCase
   def setup
     TinyMongo.db['dummies'].drop()
@@ -55,6 +64,28 @@ class TinyMongoTest < Test::Unit::TestCase
     
     assert_equal 'hello', m.foo
     assert_equal 'world', m.bar
+  end
+  
+  def test_mongo_two_keys_in_one_line
+    m = DummyTwo.new('foo' => 'hello')
+    m.bar = 'world'
+    
+    assert_equal 'hello', m.foo
+    assert_equal 'world', m.bar
+  end
+  
+  def test_mongo_key_with_default_value
+    m = DummyDefault.new
+    
+    assert_equal 'hello', m.foo
+    assert_equal 'world', m.bar
+  end
+  
+  def test_mongo_key_override_default_value
+    m = DummyDefault.new(:foo => 'world', :bar => 'hello')
+    
+    assert_equal 'world', m.foo
+    assert_equal 'hello', m.bar
   end
   
   def test_save_new
@@ -189,10 +220,20 @@ class TinyMongoTest < Test::Unit::TestCase
     assert_equal true, cursor.has_next?
   end
 
+  def test_cursor_has_next_is_false
+    cursor = Dummy.find
+    assert_equal false, cursor.has_next?
+  end
+
   def test_cursor_next_document
     obj = Dummy.create
     cursor = Dummy.find
     assert_equal obj, cursor.next_document
+  end
+
+  def test_cursor_next_document_nil
+    cursor = Dummy.find
+    assert_equal nil, cursor.next_document
   end
   
   def test_cursor_skip
@@ -202,6 +243,15 @@ class TinyMongoTest < Test::Unit::TestCase
     
     cursor = Dummy.find.skip(2)
     assert_equal obj, cursor.next_document
+  end
+
+  def test_cursor_skip_all
+    Dummy.create('foo' => 1) 
+    Dummy.create('foo' => 2) 
+    obj = Dummy.create('foo' => 3) 
+    
+    cursor = Dummy.find.skip(3)
+    assert_equal nil, cursor.next_document
   end
   
   def test_cursor_skip_count
@@ -220,6 +270,11 @@ class TinyMongoTest < Test::Unit::TestCase
 
     cursor = Dummy.find
     assert_equal [obj1, obj2, obj3], cursor.to_a
+  end
+
+  def test_cursor_to_a_empty
+    cursor = Dummy.find
+    assert_equal [], cursor.to_a
   end
   
   def test_cursor_sort

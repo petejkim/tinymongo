@@ -87,7 +87,7 @@ module TinyMongo
     
     def next_document
       doc = @_tinymongo_cursor.next_document
-      @_tinymongo_model_class.new(doc)
+      @_tinymongo_model_class.new(doc) if doc
     end
     
     def query_options_hash
@@ -120,7 +120,7 @@ module TinyMongo
       return [] if @_tinymongo_cursor.nil?
       
       hashes = @_tinymongo_cursor.to_a
-      hashes.map { |hash| @_tinymongo_model_class.new(hash) }
+      hashes.map { |hash| @_tinymongo_model_class.new(hash) if hash }
     end
     
     protected

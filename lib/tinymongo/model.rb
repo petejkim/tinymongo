@@ -2,13 +2,22 @@ module TinyMongo
   class Model
     class << self
       def mongo_key(*args)
-        args.each do |key_name|
-          if([Symbol, String].include? key_name.class)
-            key_name_s = key_name.to_s
-            key_name_sym = key_name.to_sym
+        default = nil
+        @_tinymongo_defaults = {} if @_tinymongo_defaults.nil?
+        
+        args.each do |arg|
+          default = arg[:default] || arg['default'] if(arg.instance_of? Hash)
+        end
+        
+        args.each do |arg|
+          if([Symbol, String].include? arg.class)
+            key_name_s = arg.to_s
+            key_name_sym = arg.to_sym
 
             define_method(key_name_sym) { instance_variable_get(:@_tinymongo_hash)[key_name_s] }
             define_method("#{key_name_s}=") { |val| instance_variable_get(:@_tinymongo_hash)[key_name_s] = val }
+            
+            @_tinymongo_defaults[key_name_s] = default if default
           end
         end
       end
@@ -79,7 +88,7 @@ module TinyMongo
     end
     
     def initialize(hash={})
-      @_tinymongo_hash = Helper.stringify_keys_in_hash(hash) || {}
+      @_tinymongo_hash = (self.class.instance_variable_get(:@_tinymongo_defaults).merge(Helper.stringify_keys_in_hash(hash)) || {}) if hash
     end
 
     def _id
