@@ -1,85 +1,78 @@
 module TinyMongo
   module Helper
     class << self
-      def deep_copy_hash(hash)
-        new_hash = {}
-        hash.each_pair do |key, obj|
-          new_hash[key] = if(obj.instance_of? Hash)
-            deep_copy_hash(obj)
-          elsif(obj.instance_of? Array)
-            deep_copy_array(obj)
-          else
-            begin 
-              obj.dup
-            rescue
-              obj
-            end
-          end
-        end
-        new_hash
-      end
-
-      def deep_copy_array(array)
-        new_array = []
-        array.each do |obj|
-          new_array << if(obj.instance_of? Hash)
-            deep_copy_hash(obj)
-          elsif(obj.instance_of? Array)
-            deep_copy_array(obj)
-          else
-            begin 
-              obj.dup
-            rescue
-              obj
-            end
-          end
-        end
-        new_array
+      def constantize(class_name)
+        return unless class_name.instance_of? String
+        class_name.split('::').inject(Object) { |mod, klass| mod.const_get(klass) }
       end
       
+      def deep_copy(obj)
+        if(obj.kind_of? Hash)
+          Hash[obj.map { |k,v| [k.to_s, deep_copy(v)] }]
+        elsif(obj.kind_of? Array)
+          obj.map { |o| deep_copy(o)}
+        else
+          begin
+            obj.dup
+          rescue
+            obj
+          end
+        end
+      end
+        
       def stringify_keys_in_hash(hash)
-        new_hash = {}
-        hash.each_pair { |key, value| new_hash[key.to_s] = value }
+        new_hash = Hash[hash.map { |k,v| [k.to_s, v] }]
         new_hash['_id'] = bson_object_id(new_hash['_id']) if(new_hash['_id'])
         new_hash
       end
 
       def symbolify_keys_in_hash(hash)
-        new_hash = {}
-        hash.each_pair { |key, value| new_hash[key.to_sym] = value }
+        new_hash = Hash[hash.map { |k,v| [k.to_sym, v] }]
         new_hash[:_id] = bson_object_id(new_hash[:_id]) if(new_hash[:_id])
         new_hash
       end
       
-      def hashify_models_in(obj)
-        if(obj.instance_of? Hash)
-          hashify_models_in_hash(obj)
-        elsif(obj.instance_of? Array)
-          hashify_models_in_array(obj)
-        elsif(obj.kind_of? TinyMongo::Model)
-          obj.to_hash
+      def deserialize_hashes_in(obj)
+        if(obj.kind_of? Hash)
+          new_hash = Hash[obj.map { |k,v| [k.to_s, deserialize_hashes_in(v)] }]
+          class_name = new_hash['_tinymongo_model_class_name']
+          if(class_name)
+            begin
+              klass = constantize(new_hash['_tinymongo_model_class_name'])
+              if(klass.new.kind_of? TinyMongo::Model)
+                deserialized_obj = klass.new(new_hash)
+              else
+                raise
+              end
+            rescue
+              raise DeserializationError, class_name
+            end
+            deserialized_obj
+          else
+            new_hash
+          end
+        elsif(obj.kind_of? Array)
+          obj.map { |o| deserialize_hashes_in(o) }
         else
           obj
         end
       end
       
-      def hashify_models_in_array(array)
-        new_array = array.map { |value| hashify_models_in(value) }
-      end
-      
-      def hashify_models_in_hash(hash)
-        new_hash = {}
-        hash.each_pair do |key,value|
-          key_s = key.to_s
-          if(key_s == '_id')
-            new_hash[key_s] = bson_object_id(value)
-          else
-            new_hash[key_s] = hashify_models_in(value)
-          end
+      def hashify_models_in(obj)
+        if(obj.kind_of? Hash)
+          Hash[obj.map do |k,v| 
+            key = k.to_s
+            (key == '_id') ? [key, bson_object_id(v)] : [key, hashify_models_in(v)]
+          end]
+        elsif(obj.kind_of? Array)
+          obj.map { |o| hashify_models_in(o) }
+        elsif(obj.kind_of? TinyMongo::Model)
+          hashify_models_in(obj.to_hash)
+        else
+          obj
         end
-        new_hash
       end
-      
+
       def bson_object_id(id)
         if(id.instance_of? BSON::ObjectID)
           id

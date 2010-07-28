@@ -38,24 +38,30 @@ class TinyMongoTest < Test::Unit::TestCase
     obj1 = Dummy.new(:foo => 'hello', :bar => 'world')
     obj2 = Dummy.new(:foo => 'love', :bar => 'ek')
     hash = { :obj1 => obj1, :obj2 => obj2, :hash => { :obj => obj1 }, :array => [obj1, obj2, 'yay'], :val => 'pete' }
-    assert_equal({ 'obj1'  => { 'foo' => 'hello', 'bar' => 'world' }, 
-                   'obj2'  => { 'foo' => 'love', 'bar' => 'ek' },
-                   'hash'  => { 'obj' => { 'foo' => 'hello', 'bar' => 'world' } },
-                   'array' => [ { 'foo' => 'hello', 'bar' => 'world' }, { 'foo' => 'love', 'bar' => 'ek' }, 'yay' ],
+    obj1_hash = { 'foo' => 'hello', 'bar' => 'world', '_tinymongo_model_class_name' => 'Dummy' }
+    obj2_hash = { 'foo' => 'love', 'bar' => 'ek', '_tinymongo_model_class_name' => 'Dummy' }
+    
+    assert_equal({ 'obj1'  => obj1_hash, 
+                   'obj2'  => obj2_hash,
+                   'hash'  => { 'obj' => obj1_hash },
+                   'array' => [ obj1_hash, obj2_hash, 'yay' ],
                    'val'   => 'pete' },
-                 TinyMongo::Helper.hashify_models_in_hash(hash))
+                 TinyMongo::Helper.hashify_models_in(hash))
   end
   
   def test_helper_hashify_models_in_array
     obj1 = Dummy.new(:foo => 'hello', :bar => 'world')
     obj2 = Dummy.new(:foo => 'love', :bar => 'ek')
     array = [ obj1, obj2, { :obj => obj1 }, [obj1, obj2, 'yay'], 'pete' ]
-    assert_equal([ { 'foo' => 'hello', 'bar' => 'world' }, 
-                   { 'foo' => 'love', 'bar' => 'ek' },
-                   { 'obj' => { 'foo' => 'hello', 'bar' => 'world' } },
-                   [ { 'foo' => 'hello', 'bar' => 'world' }, { 'foo' => 'love', 'bar' => 'ek' }, 'yay' ],
+    obj1_hash = { 'foo' => 'hello', 'bar' => 'world', '_tinymongo_model_class_name' => 'Dummy' }
+    obj2_hash = { 'foo' => 'love', 'bar' => 'ek', '_tinymongo_model_class_name' => 'Dummy' }
+    
+    assert_equal([ obj1_hash,
+                   obj2_hash,
+                   { 'obj' => obj1_hash },
+                   [ obj1_hash, obj2_hash, 'yay' ],
                    'pete' ],
-                 TinyMongo::Helper.hashify_models_in_array(array))
+                 TinyMongo::Helper.hashify_models_in(array))
   end
   
   def test_mongo_key
@@ -94,6 +100,7 @@ class TinyMongoTest < Test::Unit::TestCase
     obj = Dummy.new(hash) 
     obj.save # save to db
     hash['_id'] = obj._id # add _id to hash
+    hash['_tinymongo_model_class_name'] = 'Dummy'
     result = TinyMongo.db['dummies'].find_one({'_id' => obj._id})
     assert_equal TinyMongo::Helper.stringify_keys_in_hash(hash), result # compare
   end
@@ -103,6 +110,7 @@ class TinyMongoTest < Test::Unit::TestCase
     
     obj = Dummy.create(hash) # save to db
     hash['_id'] = obj._id # add _id to hash
+    hash['_tinymongo_model_class_name'] = 'Dummy'
     
     result = TinyMongo.db['dummies'].find_one({'_id' => obj._id})
     assert_equal TinyMongo::Helper.stringify_keys_in_hash(hash), result, result # compare
@@ -162,42 +170,65 @@ class TinyMongoTest < Test::Unit::TestCase
     assert_equal [obj3], found2
   end
   
-  def test_cursor_close
-    Dummy.create
-    cursor = Dummy.find
-    assert_equal true, cursor.close
+  def test_find_fields
+    Dummy.create('foo' => 'hello', 'bar' => 'world')
+    found = Dummy.find({}, {'foo' => 1}).next!
+    assert_equal 'hello', found.foo
+    assert_equal nil, found.bar
   end
-
-  def test_cursor_closed?
-    Dummy.create
-    cursor = Dummy.find
-    cursor.close
-    assert_equal true, cursor.closed?
-  end
-
-
+  
   def test_cursor_count
-    Dummy.create
-    Dummy.create
-    Dummy.create
+    3.times { Dummy.create }
     cursor = Dummy.find
     assert_equal 3, cursor.count
   end
   
   def test_cursor_limit
-    Dummy.create
-    Dummy.create
-    Dummy.create
+    3.times { Dummy.create }
     cursor = Dummy.find.limit(1)
     assert_equal 1, cursor.to_a.size
   end
   
   def test_cursor_limit_count
-    Dummy.create
-    Dummy.create
-    Dummy.create
+    3.times { Dummy.create }
     cursor = Dummy.find.limit(2)
     assert_equal 2, cursor.limit
+  end
+  
+  def test_cursor_size
+    10.times { Dummy.create }
+    cursor = Dummy.find
+    assert_equal 10, cursor.size
+  end
+
+  def test_cursor_size_skip
+    10.times { Dummy.create }
+    cursor = Dummy.find.skip(4)
+    assert_equal 6, cursor.size
+  end
+
+  def test_cursor_size_limit
+    10.times { Dummy.create }
+    cursor = Dummy.find.limit(5)
+    assert_equal 5, cursor.size
+  end
+
+  def test_cursor_size_skip_limit
+    10.times { Dummy.create }
+    cursor = Dummy.find.skip(3).limit(5)
+    assert_equal 5, cursor.size
+  end
+
+  def test_cursor_size_skip_too_much
+    10.times { Dummy.create }
+    cursor = Dummy.find.skip(10)
+    assert_equal 0, cursor.size
+  end
+
+  def test_cursor_size_skip_limit_out_of_bounds
+    10.times { Dummy.create }
+    cursor = Dummy.find.skip(7).limit(5)
+    assert_equal 3, cursor.size
   end
 
   def test_cursor_each
@@ -224,16 +255,16 @@ class TinyMongoTest < Test::Unit::TestCase
     cursor = Dummy.find
     assert_equal false, cursor.has_next?
   end
-
-  def test_cursor_next_document
+  
+  def test_cursor_next!
     obj = Dummy.create
     cursor = Dummy.find
-    assert_equal obj, cursor.next_document
+    assert_equal obj, cursor.next!
   end
 
-  def test_cursor_next_document_nil
+  def test_cursor_next_nil
     cursor = Dummy.find
-    assert_equal nil, cursor.next_document
+    assert_equal nil, cursor.next!
   end
   
   def test_cursor_skip
@@ -242,7 +273,7 @@ class TinyMongoTest < Test::Unit::TestCase
     obj = Dummy.create('foo' => 3) 
     
     cursor = Dummy.find.skip(2)
-    assert_equal obj, cursor.next_document
+    assert_equal obj, cursor.next!
   end
 
   def test_cursor_skip_all
@@ -251,7 +282,7 @@ class TinyMongoTest < Test::Unit::TestCase
     obj = Dummy.create('foo' => 3) 
     
     cursor = Dummy.find.skip(3)
-    assert_equal nil, cursor.next_document
+    assert_equal nil, cursor.next!
   end
   
   def test_cursor_skip_count
@@ -338,12 +369,7 @@ class TinyMongoTest < Test::Unit::TestCase
   
   def test_to_hash
     obj = Dummy.create('foo' => 'hello')
-    assert_equal({'_id' => obj._id, 'foo' => 'hello'}, obj.to_hash)
-  end
-  
-  def test_id
-    obj = Dummy.create
-    assert_equal obj._id.to_s, obj.id
+    assert_equal({'_id' => obj._id, 'foo' => 'hello', '_tinymongo_model_class_name' => 'Dummy'}, obj.to_hash)
   end
   
   def test_to_param
@@ -453,6 +479,17 @@ class TinyMongoTest < Test::Unit::TestCase
     assert_equal [1,1,2,2,2,3], TinyMongo.db['dummies'].find_one()['foo']
     d.pull_all({'foo' => [1,2]})
     assert_equal [3], TinyMongo.db['dummies'].find_one()['foo']
+  end
+  
+  def test_deserialize
+    Dummy.create('foo' => 'array', 'bar' => [Dummy.create('foo' => 'hello'), Dummy.create('foo' => 'world')])
+    d = Dummy.find_one({'foo' => 'array'})
+    assert_equal 'Dummy', d.class.to_s
+    assert_equal 'array', d.foo
+    assert_equal 'Dummy', d.bar[0].class.to_s
+    assert_equal 'hello', d.bar[0].foo
+    assert_equal 'Dummy', d.bar[1].class.to_s
+    assert_equal 'world', d.bar[1].foo
   end
   
 end

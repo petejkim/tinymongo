@@ -14,63 +14,26 @@ module TinyMongo
       @_tinymongo_cursor
     end
     
-    def batch_size
-      @_tinymongo_cursor.batch_size
-    end
-    
-    def collection
-      @_tinymongo_cursor.collection
-    end
-    
-    def fields 
-      @_tinymongo_cursor.fields
-    end
-    
-    def full_collection_name
-      @_tinymongo_cursor.full_collection_name
-    end
-    
-    def hint
-      @_tinymongo_cursor.hint
-    end 
-    
-    def order
-      @_tinymongo_cursor.order
-    end
-    
-    def selector
-      @_tinymongo_cursor.selector
-    end
-    
-    def snapshot
-      @_tinymongo_cursor.snapshot
-    end
-    
-    def timeout
-      @_tinymongo_cursor.timeout
-    end
-    
-    # instance methods in Mongo::Cursor
-    
-    def close
-      @_tinymongo_cursor.close
-    end
-    
-    def closed?
-      @_tinymongo_cursor.closed?
-    end
-    
     def count
       @_tinymongo_cursor.count
+    end
+    
+    def size
+      num = (count - skip)
+      num = (num > 0) ? (((num > limit) && limit != 0) ? limit : num) : 0
     end
     
     def each
       num_returned = 0
       while(has_next? && (@_tinymongo_cursor.instance_variable_get(:@limit) <= 0 ||
         num_returned < @_tinymongo_cursor.instance_variable_get(:@limit)))
-        yield next_document
+        yield next!
         num_returned += 1
       end
+    end
+    
+    def forEach(*args)
+      each(*args)
     end
     
     def explain
@@ -81,21 +44,25 @@ module TinyMongo
       @_tinymongo_cursor.has_next?
     end
     
+    def hasNext
+      has_next?
+    end
+    
     def limit(*args)
       call_and_wrap_retval_in_tinymongo_cursor(:limit, args)
     end
     
-    def next_document
+    def next!
       doc = @_tinymongo_cursor.next_document
-      @_tinymongo_model_class.new(doc) if doc
+      Helper.deserialize_hashes_in(doc)
     end
     
-    def query_options_hash
-      @_tinymongo_cursor.query_options_hash
+    def next_document
+      next!
     end
     
-    def query_opts
-      @_tinymongo_cursor.query_opts
+    def nextDocument
+      next!
     end
     
     def skip(*args)
@@ -104,13 +71,7 @@ module TinyMongo
     
     def sort(*args)
       if(args.length > 0 && (args[0].instance_of? Hash))
-        sort_array = []
-        
-        args[0].each_pair do |key, value|
-          sort_array << [key, convert_ascending_descending_to_numeric(value)]
-        end
-        
-        args[0] = sort_array
+        args[0] = args[0].map { |k, v| [k, convert_ascending_descending_to_numeric(v)] }
       end
         
       call_and_wrap_retval_in_tinymongo_cursor(:sort, args)
@@ -120,7 +81,7 @@ module TinyMongo
       return [] if @_tinymongo_cursor.nil?
       
       hashes = @_tinymongo_cursor.to_a
-      hashes.map { |hash| @_tinymongo_model_class.new(hash) if hash }
+      hashes.map { |hash| Helper.deserialize_hashes_in(hash) }
     end
     
     protected

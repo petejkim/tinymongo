@@ -40,21 +40,31 @@ module TinyMongo
         end
       end
       
-      def find(*args)
-        new_args = args.map {|arg| Helper.hashify_models_in(arg) }
-        Cursor.new(collection.find(*new_args), self)
+      def find(query={}, fields=nil, limit=nil, skip=nil)
+        query = Helper.hashify_models_in(query)
+        fields = Helper.hashify_models_in(fields)
+        
+        add_tinymongo_model_class_name_key_to_fields(fields)
+        Cursor.new(collection.find(query, {:fields => fields, :limit => limit, :skip => skip}), self)
+      end
+      
+      def find_one(query={}, fields=nil)
+        return nil unless query
+        
+        if([BSON::ObjectID, String].include? query.class)
+          query = {'_id' => Helper.bson_object_id(query)}
+        else
+          query = Helper.hashify_models_in(query)
+          fields = Helper.hashify_models_in(fields)
+        end
+        
+        add_tinymongo_model_class_name_key_to_fields(fields)
+        hash = collection.find_one(query, {:fields => fields})
+        hash ? Helper.deserialize_hashes_in(hash) : nil
       end
 
-      def find_one(*args)
-        if((args.length > 0) && (args.compact.length == 0))
-          return nil
-        elsif((args.length == 1) && ([BSON::ObjectID, String].include? args[0].class))
-          hash = collection.find_one({'_id' => Helper.bson_object_id(args[0])})
-        else
-          new_args = args.map {|arg| Helper.hashify_models_in(arg) }
-          hash = collection.find_one(*new_args)
-        end
-        hash ? self.new(hash) : nil
+      def findOne(*args)
+        find_one(*args)
       end
 
       def create(hash={})
@@ -88,7 +98,9 @@ module TinyMongo
     end
     
     def initialize(hash={})
-      @_tinymongo_hash = (Helper.deep_copy_hash(self.class.instance_variable_get(:@_tinymongo_defaults)).merge(Helper.stringify_keys_in_hash(hash)) || {}) if hash
+      @_tinymongo_hash = (Helper.deep_copy(self.class.instance_variable_get(:@_tinymongo_defaults)).merge(Helper.stringify_keys_in_hash(hash)) || {}) if hash
+      set_tinymongo_model_class_name_in_hash(@_tinymongo_hash)
+      self
     end
 
     def _id
@@ -96,14 +108,6 @@ module TinyMongo
     end
     
     def _id=(val)
-      @_tinymongo_hash['_id'] = Helper.bson_object_id(val)
-    end
-    
-    def id
-      @_tinymongo_hash['_id'].to_s
-    end
-    
-    def id=(val)
       @_tinymongo_hash['_id'] = Helper.bson_object_id(val)
     end
     
@@ -121,7 +125,7 @@ module TinyMongo
     end
     
     def to_hash
-      @_tinymongo_hash.dup
+      hash = @_tinymongo_hash.dup
     end
     
     def to_param
@@ -131,19 +135,19 @@ module TinyMongo
     def reload
       if(@_tinymongo_hash['_id'])
         obj = collection.find_one({ '_id' => @_tinymongo_hash['_id'] })
-        @_tinymongo_hash = Helper.stringify_keys_in_hash(obj) if(obj)
+        @_tinymongo_hash = Hash[obj.map { |k,v| [k.to_s, Helper.deserialize_hashes_in(v)] }] if(obj)
       end
     end
 
     def save
       if(@_tinymongo_hash['_id'].nil?) # new 
-        oid = collection.save(@_tinymongo_hash)
+        oid = collection.save(Helper.hashify_models_in(@_tinymongo_hash))
         if(oid)
           @_tinymongo_hash.delete(:_id)
           @_tinymongo_hash['_id'] = oid
         end
       else # update
-        collection.update({ '_id' => @_tinymongo_hash['_id'] }, @_tinymongo_hash, :upsert => true)
+        collection.update({ '_id' => @_tinymongo_hash['_id'] }, Helper.hashify_models_in(@_tinymongo_hash), :upsert => true)
         reload
       end
       return self
@@ -184,13 +188,21 @@ module TinyMongo
     def push(hash={})
       do_modifier_operation_and_reload('$push', hash)
     end
-
+    
     def push_all(hash={})
       do_modifier_operation_and_reload('$pushAll', hash)
+    end
+    
+    def pushAll(*args)
+      push_all(*args)
     end
 
     def add_to_set(hash={})
       do_modifier_operation_and_reload('$addToSet', hash)
+    end
+    
+    def addToSet(*args)
+      add_to_set(*args)
     end
 
     def pop(hash={})
@@ -204,12 +216,30 @@ module TinyMongo
     def pull_all(hash={})
       do_modifier_operation_and_reload('$pullAll', hash)
     end
+    
+    def pullAll(*args)
+      pull_all(*args)
+    end
   
     protected
     def do_modifier_operation_and_reload(operator, hash)
       raise ModifierOperationError unless @_tinymongo_hash['_id']
-      collection.update({ '_id' => @_tinymongo_hash['_id'] }, { operator => Helper.hashify_models_in_hash(hash) })
+      collection.update({ '_id' => @_tinymongo_hash['_id'] }, { operator => Helper.hashify_models_in(hash) })
       reload
+    end
+    
+    def set_tinymongo_model_class_name_in_hash(hash)
+      hash['_tinymongo_model_class_name'] = self.class.to_s
+      hash
+    end
+    
+    def self.add_tinymongo_model_class_name_key_to_fields(fields)
+      if(fields.kind_of? Hash)
+        fields['_tinymongo_model_class_name'] = 1
+      elsif(fields.kind_of? Array)
+        fields << '_tinymongo_model_class_name'
+      end
+      fields
     end
   end
 end

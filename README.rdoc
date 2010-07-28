@@ -47,25 +47,31 @@ To create TinyMongo config file (config/tinymongo.yml) and initializer file (con
     end
   end
   
-  Person.drop                         # empty drop collection
+  Person.drop                         # empty person collection
   
-  p = Person.create(:name => 'John', :age => 20)  # create John
-  p.make_child                        # make Baby and set it as John's child
-  p.grow_up                           # increment age by 1 = 21
+  p = Person.create(:name => 'John', :age => 20)
+  p.make_child
+  p.grow_up
   
   Person.find.each do |person|
-    puts person.name                  # print Baby and John
+    puts person.name
   end
   
-  puts Person.find_one(:name => 'John').age  # print 21
+  Person.find_one(:name => 'John').age
   
   Person.create(:name => 'Jim')
   Person.create(:name => 'Pam')
 
-  puts Person.find.to_a.map { |person| person.name } # print Baby; John; Jim; Pam
+  Person.find.to_a.map { |person| person.name }
   
-  # Sort by name (ascending), Skip Baby and Jim, limit result by 1, print => John
-  puts Person.find.sort({:name => 1}).skip(2).limit(1).next_document.name 
+  Person.find.has_next?
+
+  Person.find.sort({:name => 1}).skip(2).limit(1).next!.name 
+  
+  Person.find({:name => 'John'}, {:age => 1}) # select only age field
+  
+  Person.find.count # count ignores skip and limit
+  Person.find.skip(1).size # size is affected by skip and limit
   
 == Copyright
 

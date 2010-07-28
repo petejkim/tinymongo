@@ -19,4 +19,10 @@ module TinyMongo
       super('Modifier operations are not allowed on objects that are not yet saved!')
     end
   end
+  
+  class DeserializationError < Error
+    def initialize(class_name)
+      super("Unable to deserialize hash into #{class_name}!")
+    end
+  end
 end
