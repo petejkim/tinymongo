@@ -1,6 +1,42 @@
 module TinyMongo
   module Helper
     class << self
+      def deep_copy_hash(hash)
+        new_hash = {}
+        hash.each_pair do |key, obj|
+          new_hash[key] = if(obj.instance_of? Hash)
+            deep_copy_hash(obj)
+          elsif(obj.instance_of? Array)
+            deep_copy_array(obj)
+          else
+            begin 
+              obj.dup
+            rescue
+              obj
+            end
+          end
+        end
+        new_hash
+      end
+
+      def deep_copy_array(array)
+        new_array = []
+        array.each do |obj|
+          new_array << if(obj.instance_of? Hash)
+            deep_copy_hash(obj)
+          elsif(obj.instance_of? Array)
+            deep_copy_array(obj)
+          else
+            begin 
+              obj.dup
+            rescue
+              obj
+            end
+          end
+        end
+        new_array
+      end
+      
       def stringify_keys_in_hash(hash)
         new_hash = {}
         hash.each_pair { |key, value| new_hash[key.to_s] = value }

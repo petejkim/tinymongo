@@ -88,7 +88,7 @@ module TinyMongo
     end
     
     def initialize(hash={})
-      @_tinymongo_hash = (self.class.instance_variable_get(:@_tinymongo_defaults).merge(Helper.stringify_keys_in_hash(hash)) || {}) if hash
+      @_tinymongo_hash = (Helper.deep_copy_hash(self.class.instance_variable_get(:@_tinymongo_defaults)).merge(Helper.stringify_keys_in_hash(hash)) || {}) if hash
     end
 
     def _id
