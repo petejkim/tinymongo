@@ -21,7 +21,7 @@ end
 
 class TinyMongoTest < Test::Unit::TestCase
   def setup
-    TinyMongo.db['dummies'].drop()
+    TinyMongo.db['dummies'].drop
   end
   
   def test_helper_stringify_keys_in_hash
@@ -114,6 +114,13 @@ class TinyMongoTest < Test::Unit::TestCase
     
     result = TinyMongo.db['dummies'].find_one({'_id' => obj._id})
     assert_equal TinyMongo::Helper.stringify_keys_in_hash(hash), result, result # compare
+  end
+
+  def test_create_ignore_undefined_keys
+    obj = Dummy.create({'foo' => 'hello', 'bar' => 'world', 'fubar' => 'snafu'}) # save to db
+    
+    result = TinyMongo.db['dummies'].find_one({'_id' => obj._id})
+    assert_equal TinyMongo::Helper.stringify_keys_in_hash({'foo' => 'hello', 'bar' => 'world', '_id' => obj._id, '_tinymongo_model_class_name' => 'Dummy'}), result, result # compare
   end
 
   def test_save_update
@@ -313,10 +320,19 @@ class TinyMongoTest < Test::Unit::TestCase
     obj2 = Dummy.create('foo' => 2) 
     obj3 = Dummy.create('foo' => 1) 
     
-    cursor = Dummy.find.sort(['foo', 'ascending'])
+    cursor = Dummy.find.sort('foo')
     assert_equal [obj3, obj2, obj1], cursor.to_a
   end
 
+  def test_cursor_sort_array
+    obj1 = Dummy.create('foo' => 3) 
+    obj2 = Dummy.create('foo' => 2) 
+    obj3 = Dummy.create('foo' => 1) 
+    
+    cursor = Dummy.find.sort([['foo', 'ascending']])
+    assert_equal [obj3, obj2, obj1], cursor.to_a
+  end
+  
   def test_cursor_sort_hash
     obj1 = Dummy.create('foo' => 3) 
     obj2 = Dummy.create('foo' => 2) 
@@ -492,4 +508,64 @@ class TinyMongoTest < Test::Unit::TestCase
     assert_equal 'world', d.bar[1].foo
   end
   
+  def test_full_name
+    assert_equal 'tinymongo_test.dummies', Dummy.full_name
+  end
+  
+  def test_get_indexes
+    Dummy.create
+    assert_equal [{'name' => '_id_', 'ns' => 'tinymongo_test.dummies', 'key' => {'_id' => 1}}], Dummy.get_indexes
+  end
+
+  def test_ensure_index
+    Dummy.create
+    assert_equal 'foo_1', Dummy.ensure_index({'foo' => 1})
+    assert_equal 'foo_1_bar_-1', Dummy.ensure_index({'foo' => 1, 'bar' => -1})
+    assert_equal [{"name" => "_id_", "ns" => "tinymongo_test.dummies", "key" => {"_id" => 1}},
+                  {"name" => "foo_1", "ns" => "tinymongo_test.dummies", "key" => {"foo" => 1}}, 
+                  {"name" => "foo_1_bar_-1", "ns" => "tinymongo_test.dummies", "key" => {"foo" => 1, "bar" => -1}}],
+                  Dummy.get_indexes
+  end
+  
+  def test_drop_index
+    Dummy.create
+    index_name = Dummy.ensure_index({'foo' => 1})
+    assert_equal [{"name" => "_id_", "ns" => "tinymongo_test.dummies", "key" => {"_id" => 1}},
+                  {"name" => "foo_1", "ns" => "tinymongo_test.dummies", "key" => {"foo" => 1}}],
+                  Dummy.get_indexes
+    Dummy.drop_index(index_name)
+    assert_equal [{'name' => '_id_', 'ns' => 'tinymongo_test.dummies', 'key' => {'_id' => 1}}], Dummy.get_indexes
+  end
+  
+  def test_drop_index_hash
+    Dummy.create
+    index_name = Dummy.ensure_index({'foo' => 1, 'bar' => -1})
+    Dummy.drop_index({'foo' => 1, 'bar' => -1})
+    assert_equal [{'name' => '_id_', 'ns' => 'tinymongo_test.dummies', 'key' => {'_id' => 1}}], Dummy.get_indexes
+  end
+  
+  def test_drop_index_array
+    Dummy.create
+    index_name = Dummy.ensure_index({'foo' => 1, 'bar' => -1})
+    Dummy.drop_index([['foo', 1], ['bar', -1]])
+    assert_equal [{'name' => '_id_', 'ns' => 'tinymongo_test.dummies', 'key' => {'_id' => 1}}], Dummy.get_indexes
+  end
+  
+  def test_drop_indexes
+    Dummy.create
+    Dummy.ensure_index({'foo' => 1})
+    Dummy.ensure_index({'bar' => 1})
+    Dummy.drop_indexes
+    assert_equal [{'name' => '_id_', 'ns' => 'tinymongo_test.dummies', 'key' => {'_id' => 1}}], Dummy.get_indexes
+  end
+  
+  def test_distinct
+    Dummy.create('foo' => 'hello', 'bar' => 'hello')
+    Dummy.create('foo' => 'hello', 'bar' => 'world')
+    Dummy.create('foo' => 'world', 'bar' => 'world')
+    Dummy.create('foo' => 'world', 'bar' => 'world')
+    assert_equal ['hello','world'], Dummy.distinct('foo')
+    assert_equal ['hello'], Dummy.distinct('foo', {'bar' => 'hello'})
+    assert_equal ['hello','world'], Dummy.distinct('foo', {'bar' => 'world'})
+  end
 end

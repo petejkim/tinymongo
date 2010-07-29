@@ -2,7 +2,7 @@ require 'mongo'
 
 module TinyMongo
   class << self
-    def configure(config)
+    def configure(config={})
       config = Helper.stringify_keys_in_hash(config)
     
       @host = config['host'] || 'localhost'

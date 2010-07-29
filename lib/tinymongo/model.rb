@@ -6,7 +6,7 @@ module TinyMongo
         @_tinymongo_defaults = {} if @_tinymongo_defaults.nil?
         
         args.each do |arg|
-          default = arg[:default] || arg['default'] if(arg.instance_of? Hash)
+          default = arg[:default] || arg['default'] if(arg.kind_of? Hash)
         end
         
         args.each do |arg|
@@ -38,6 +38,18 @@ module TinyMongo
         else
           TinyMongo.db[self.to_s]
         end
+      end
+      
+      def full_name
+        "#{db.name}.#{collection.name}"
+      end
+      
+      def get_full_name
+        full_name
+      end
+      
+      def getFullName
+        full_name
       end
       
       def find(query={}, fields=nil, limit=nil, skip=nil)
@@ -76,8 +88,12 @@ module TinyMongo
         collection.remove({ '_id' => Helper.bson_object_id(id)})
       end
 
-      def destroy(id)
-        delete(id)
+      def destroy(*args)
+        delete(*args)
+      end
+      
+      def remove(*args)
+        delete(*args)
       end
 
       def drop
@@ -95,10 +111,69 @@ module TinyMongo
       def count
         collection.count
       end
+      
+      def ensure_index(keys, options={})
+        if(keys.kind_of? Hash)
+          keys = keys.map { |k,v| [k.to_s, convert_ascending_descending_2d(v)]}
+        elsif(keys.kind_of? Array)
+          keys = keys.map { |o| (o.kind_of? Array) ? [o[0].to_s, convert_ascending_descending_2d(o[1])] : nil }.compact
+        end
+        options = Helper.symbolify_keys_in_hash(options)
+        collection.create_index(keys, options)
+      end
+      
+      def ensureIndex(*args)
+        ensure_index(*args)
+      end
+      
+      def drop_index(obj)
+        if(obj.instance_of? String)
+          index = obj
+        elsif(obj.kind_of? Hash)
+          index = get_index_name(obj)
+        elsif(obj.kind_of? Array)
+          index = get_index_name(Hash[obj])
+        else
+          return
+        end
+        
+        collection.drop_index(index)
+      end
+      
+      def dropIndex(*args)
+        drop_index(*args)
+      end
+      
+      def drop_indexes
+        collection.drop_indexes
+      end
+      
+      def dropIndexes
+        drop_indexes
+      end
+      
+      def get_indexes
+        collection.index_information.map { |k,v| v }
+      end
+      
+      def getIndexes
+        get_indexes
+      end
+      
+      def distinct(key, query=nil)
+        if(query.kind_of? Hash)
+          query = Helper.hashify_models_in(query)
+        end
+        collection.distinct(key, query)
+      end
     end
     
     def initialize(hash={})
-      @_tinymongo_hash = (Helper.deep_copy(self.class.instance_variable_get(:@_tinymongo_defaults)).merge(Helper.stringify_keys_in_hash(hash)) || {}) if hash
+      @_tinymongo_hash = {}
+      defaults = self.class.instance_variable_get(:@_tinymongo_defaults)
+      defaults = self.class.instance_variable_set(:@_tinymongo_defaults, {}) if(defaults.nil?)
+      hash = Helper.deep_copy(defaults).merge(Helper.stringify_keys_in_hash(hash || {}))
+      hash.each_pair { |key, value| set_using_setter(key, value) }
       set_tinymongo_model_class_name_in_hash(@_tinymongo_hash)
       self
     end
@@ -153,16 +228,16 @@ module TinyMongo
       return self
     end
   
-    def update_attribute(name, value)
-      send(name.to_s + '=', value)
+    def update_attribute(key, value)
+      set_using_setter(key, value)
       save
     end
   
     def update_attributes(hash={})
-      hash.each_pair { |key, value| send(key.to_s + '=', value) }
+      hash.each_pair { |key, value| set_using_setter(key, value) }
       save
     end
-  
+    
     def delete
       if(@_tinymongo_hash['_id'])
         collection.remove({ '_id' => @_tinymongo_hash['_id'] })
@@ -240,6 +315,46 @@ module TinyMongo
         fields << '_tinymongo_model_class_name'
       end
       fields
+    end
+    
+    def set_using_setter(key, value)
+      setter = key.to_s + '='
+      self.send(setter, value) if(self.respond_to? setter)
+    end
+    
+    def self.convert_ascending_descending_2d(val)
+      case(val.to_s)
+      when 'ascending', 'asc', '1', Mongo::ASCENDING.to_s
+        Mongo::ASCENDING
+      when 'descending', 'desc', '-1', Mongo::DESCENDING.to_s
+        Mongo::DESCENDING
+      when '2d', Mongo::GEO2D.to_s
+        Mongo::GEO2D
+      else
+        val
+      end
+    end
+    
+    def self.convert_ascending_descending_to_numeric(val)
+      case(val.to_s)
+      when 'ascending', 'asc', '1', Mongo::ASCENDING.to_s
+        1
+      when 'descending', 'desc', '-1', Mongo::DESCENDING.to_s
+        -1
+      else
+        val
+      end
+    end
+    
+    def self.get_index_name(hash)
+      name = ''
+      hash.each_pair do |k,v|
+        name += '_' if(name.length > 0)
+        name += k.to_s + '_'
+        v = convert_ascending_descending_to_numeric(v)
+        name += v.to_s if(v.kind_of? Integer)
+      end
+      name
     end
   end
 end

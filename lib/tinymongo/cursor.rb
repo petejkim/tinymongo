@@ -48,8 +48,8 @@ module TinyMongo
       has_next?
     end
     
-    def limit(*args)
-      call_and_wrap_retval_in_tinymongo_cursor(:limit, args)
+    def limit(number_to_return=nil)
+      call_and_wrap_retval_in_tinymongo_cursor(:limit, [number_to_return])
     end
     
     def next!
@@ -65,16 +65,18 @@ module TinyMongo
       next!
     end
     
-    def skip(*args)
-      call_and_wrap_retval_in_tinymongo_cursor(:skip, args)
+    def skip(number_to_skip=nil)
+      call_and_wrap_retval_in_tinymongo_cursor(:skip, [number_to_skip])
     end
     
-    def sort(*args)
-      if(args.length > 0 && (args[0].instance_of? Hash))
-        args[0] = args[0].map { |k, v| [k, convert_ascending_descending_to_numeric(v)] }
+    def sort(key_or_list, direction=nil)
+      if(key_or_list.kind_of? Hash)
+        key_or_list = key_or_list.map { |k, v| [k.to_s, convert_ascending_descending(v)] }
+      elsif(key_or_list.kind_of? Array)
+        key_or_list = key_or_list.map { |o| (o.kind_of? Array) ? [o[0].to_s, convert_ascending_descending(o[1])] : nil }.compact
       end
         
-      call_and_wrap_retval_in_tinymongo_cursor(:sort, args)
+      call_and_wrap_retval_in_tinymongo_cursor(:sort, [key_or_list, direction])
     end
     
     def to_a
@@ -95,12 +97,14 @@ module TinyMongo
       end
     end
     
-    def convert_ascending_descending_to_numeric(val)
-      case(val)
-      when 'ascending', 'asc', 1
-        'ascending'
-      when 'descending', 'desc', -1
-        'descending'
+    def convert_ascending_descending(val)
+      case(val.to_s)
+      when 'ascending', 'asc', '1', Mongo::ASCENDING.to_s
+        Mongo::ASCENDING
+      when 'descending', 'desc', '-1', Mongo::DESCENDING.to_s
+        Mongo::DESCENDING
+      else
+        val
       end
     end
   end

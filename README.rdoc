@@ -73,6 +73,10 @@ To create TinyMongo config file (config/tinymongo.yml) and initializer file (con
   Person.find.count # count ignores skip and limit
   Person.find.skip(1).size # size is affected by skip and limit
   
+  Person.distinct(:name)
+  
+  Person.ensure_index({:name => 1})
+  Person.drop_index({:name => 1})
 == Copyright
 
 Copyright (c) 2010 Peter Jihoon Kim. See LICENSE for details.
