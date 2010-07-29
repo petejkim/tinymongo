@@ -77,6 +77,7 @@ To create TinyMongo config file (config/tinymongo.yml) and initializer file (con
   
   Person.ensure_index({:name => 1})
   Person.drop_index({:name => 1})
+  
 == Copyright
 
 Copyright (c) 2010 Peter Jihoon Kim. See LICENSE for details.
