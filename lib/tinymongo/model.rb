@@ -212,6 +212,7 @@ module TinyMongo
         obj = collection.find_one({ '_id' => @_tinymongo_hash['_id'] })
         @_tinymongo_hash = Hash[obj.map { |k,v| [k.to_s, Helper.deserialize_hashes_in(v)] }] if(obj)
       end
+      self
     end
 
     def save
@@ -225,7 +226,7 @@ module TinyMongo
         collection.update({ '_id' => @_tinymongo_hash['_id'] }, Helper.hashify_models_in(@_tinymongo_hash), :upsert => true)
         reload
       end
-      return self
+      self
     end
   
     def update_attribute(key, value)
