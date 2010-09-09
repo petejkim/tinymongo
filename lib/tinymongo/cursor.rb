@@ -32,9 +32,7 @@ module TinyMongo
       end
     end
     
-    def forEach(*args)
-      each(*args)
-    end
+    alias_method :forEach, :each
     
     def explain
       @_tinymongo_cursor.explain

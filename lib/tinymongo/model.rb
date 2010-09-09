@@ -44,13 +44,8 @@ module TinyMongo
         "#{db.name}.#{collection.name}"
       end
       
-      def get_full_name
-        full_name
-      end
-      
-      def getFullName
-        full_name
-      end
+      alias_method :get_full_name, :full_name
+      alias_method :getFullName :full_name
       
       def find(query={}, fields=nil, limit=nil, skip=nil)
         query = Helper.hashify_models_in(query)
@@ -63,7 +58,7 @@ module TinyMongo
       def find_one(query={}, fields=nil)
         return nil unless query
         
-        if([BSON::ObjectID, String].include? query.class)
+        if([BSON::ObjectId, String].include? query.class)
           query = {'_id' => Helper.bson_object_id(query)}
         else
           query = Helper.hashify_models_in(query)
@@ -74,10 +69,8 @@ module TinyMongo
         hash = collection.find_one(query, {:fields => fields})
         hash ? Helper.deserialize_hashes_in(hash) : nil
       end
-
-      def findOne(*args)
-        find_one(*args)
-      end
+      
+      alias_method :findOne, :find_one
 
       def create(hash={})
         obj = self.new(hash)
@@ -87,14 +80,9 @@ module TinyMongo
       def delete(id)
         collection.remove({ '_id' => Helper.bson_object_id(id)})
       end
-
-      def destroy(*args)
-        delete(*args)
-      end
       
-      def remove(*args)
-        delete(*args)
-      end
+      alias_method :destroy, :delete
+      alias_method :remove, :delete
 
       def drop
         collection.drop
@@ -103,10 +91,8 @@ module TinyMongo
       def delete_all
         drop
       end
-      
-      def destroy_all
-        drop
-      end
+
+      alias_method :destroy_all, :delete_all
       
       def count
         collection.count
@@ -122,9 +108,7 @@ module TinyMongo
         collection.create_index(keys, options)
       end
       
-      def ensureIndex(*args)
-        ensure_index(*args)
-      end
+      alias_method :ensureIndex, :ensure_index
       
       def drop_index(obj)
         if(obj.instance_of? String)
@@ -140,25 +124,19 @@ module TinyMongo
         collection.drop_index(index)
       end
       
-      def dropIndex(*args)
-        drop_index(*args)
-      end
+      alias_method :dropIndex, :drop_index
       
       def drop_indexes
         collection.drop_indexes
       end
       
-      def dropIndexes
-        drop_indexes
-      end
+      alias_method :dropIndexes, :drop_indexes
       
       def get_indexes
         collection.index_information.map { |k,v| v }
       end
       
-      def getIndexes
-        get_indexes
-      end
+      alias_method :getIndexes, :get_indexes
       
       def distinct(key, query=nil)
         if(query.kind_of? Hash)
@@ -244,10 +222,8 @@ module TinyMongo
         collection.remove({ '_id' => @_tinymongo_hash['_id'] })
       end
     end
-  
-    def destroy
-      delete
-    end
+    
+    alias_method :destroy, :delete
       
     def inc(hash={})
       do_modifier_operation_and_reload('$inc', hash)
@@ -269,17 +245,13 @@ module TinyMongo
       do_modifier_operation_and_reload('$pushAll', hash)
     end
     
-    def pushAll(*args)
-      push_all(*args)
-    end
+    alias_method :pushAll, :push_all
 
     def add_to_set(hash={})
       do_modifier_operation_and_reload('$addToSet', hash)
     end
     
-    def addToSet(*args)
-      add_to_set(*args)
-    end
+    alias_method :addToSet, :add_to_set
 
     def pop(hash={})
       do_modifier_operation_and_reload('$pop', hash)
@@ -293,9 +265,7 @@ module TinyMongo
       do_modifier_operation_and_reload('$pullAll', hash)
     end
     
-    def pullAll(*args)
-      pull_all(*args)
-    end
+    alias_method :pullAll, :pull_all
   
     protected
     def do_modifier_operation_and_reload(operator, hash)

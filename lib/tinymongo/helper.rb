@@ -74,12 +74,12 @@ module TinyMongo
       end
 
       def bson_object_id(id)
-        if(id.instance_of? BSON::ObjectID)
+        if(id.instance_of? BSON::ObjectId)
           id
         elsif(id.instance_of? String)
-          BSON::ObjectID(id)
+          BSON::ObjectId(id)
         else
-          BSON::ObjectID(id.to_s)
+          BSON::ObjectId(id.to_s)
         end
       end
     end
