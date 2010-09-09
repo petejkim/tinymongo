@@ -45,7 +45,7 @@ module TinyMongo
       end
       
       alias_method :get_full_name, :full_name
-      alias_method :getFullName :full_name
+      alias_method :getFullName, :full_name
       
       def find(query={}, fields=nil, limit=nil, skip=nil)
         query = Helper.hashify_models_in(query)
